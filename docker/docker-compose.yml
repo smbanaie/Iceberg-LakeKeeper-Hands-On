@@ -17,9 +17,10 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
     volumes:
-      - ../data:/opt/spark/data
-      - ../src:/opt/spark/src
-      - ../notebooks:/opt/spark/notebooks
+      - ../data:/opt/bitnami/spark/data
+      - ../src:/opt/bitnami/spark/src
+      - ../notebooks:/opt/bitnami/spark/notebooks
+      - ../scripts:/opt/bitnami/spark/scripts
     networks:
       - iceberg-network
 
@@ -42,8 +43,10 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
     volumes:
-      - ../data:/opt/spark/data
-      - ../src:/opt/spark/src
+      - ../data:/opt/bitnami/spark/data
+      - ../src:/opt/bitnami/spark/src
+      - ../scripts:/opt/bitnami/spark/scripts
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     networks:
       - iceberg-network
 
@@ -59,12 +62,13 @@ services:
     environment:
       - SPARK_MASTER_URL=spark://spark-master:7077
     volumes:
-      - ../data:/opt/spark/data
-      - ../src:/opt/spark/src
-      - ../notebooks:/opt/spark/notebooks
+      - ../data:/opt/bitnami/spark/data
+      - ../src:/opt/bitnami/spark/src
+      - ../notebooks:/opt/bitnami/spark/notebooks
+      - ../scripts:/opt/bitnami/spark/scripts
     command: >
       bash -c "
-        jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+        cd /opt/bitnami/spark && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
       "
     networks:
       - iceberg-network

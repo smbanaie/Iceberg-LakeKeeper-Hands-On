@@ -6,23 +6,31 @@ mkdir -p data/raw data/stage data/reconciled
 
 # Build and start Docker containers
 echo "Building and starting Docker containers..."
-cd docker && docker-compose up -d
+docker-compose up -d
 
 # Wait for services to be ready
 echo "Waiting for services to be ready..."
 sleep 15
 
+# Initialize MinIO buckets
+echo "Initializing MinIO buckets..."
+docker exec jupyter python /opt/bitnami/spark/scripts/init_minio.py
+
 # Initialize the Iceberg environment
 echo "Initializing Iceberg environment..."
-docker exec -it jupyter python /opt/bitnami/spark/scripts/init_iceberg.py
+docker exec jupyter python /opt/bitnami/spark/scripts/init_iceberg.py
+
+# Run tests to verify configuration
+echo "Running tests to verify configuration..."
+docker exec jupyter python /opt/bitnami/spark/scripts/run_tests.py
 
 # Generate sample data
 echo "Generating sample data..."
-docker exec -it jupyter python /opt/bitnami/spark/scripts/generate_sample_data.py
+docker exec jupyter python /opt/bitnami/spark/scripts/generate_sample_data.py
 
 # Load sample data into Iceberg tables
 echo "Loading sample data into Iceberg tables..."
-docker exec -it jupyter python /opt/bitnami/spark/scripts/ingest_data.py
+docker exec jupyter python /opt/bitnami/spark/scripts/ingest_data.py
 
 echo "Setup completed successfully!"
 echo "You can now access:"

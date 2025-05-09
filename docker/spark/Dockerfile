@@ -40,16 +40,16 @@ RUN wget https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.17.257/b
 RUN wget https://jdbc.postgresql.org/download/postgresql-42.5.1.jar -P $SPARK_HOME/jars/
 
 # Create directories for data and notebooks
-RUN mkdir -p /opt/spark/data /opt/spark/notebooks /opt/spark/src
+RUN mkdir -p $SPARK_HOME/data $SPARK_HOME/notebooks $SPARK_HOME/src $SPARK_HOME/scripts
 
 # Copy Spark configuration
 COPY conf/spark-defaults.conf $SPARK_HOME/conf/
 
 # Set working directory
-WORKDIR /opt/spark
+WORKDIR $SPARK_HOME
 
 # Expose ports for Spark UI and Jupyter
 EXPOSE 4040 8080 8081 8888
 
 # Default command
-CMD ["bin/spark-submit"]
+CMD ["bin/spark-class", "org.apache.spark.deploy.master.Master"]

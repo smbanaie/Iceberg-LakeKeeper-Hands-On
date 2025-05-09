@@ -28,12 +28,14 @@ def create_spark_session():
         .config("spark.sql.catalog.spark_catalog.type", "hive") \
         .config("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog") \
         .config("spark.sql.catalog.local.type", "hadoop") \
-        .config("spark.sql.catalog.local.warehouse", "s3a://warehouse/") \
+        .config("spark.sql.catalog.local.warehouse", "s3a://warehouse/iceberg-warehouse/") \
         .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
         .config("spark.hadoop.fs.s3a.access.key", "minio") \
         .config("spark.hadoop.fs.s3a.secret.key", "minio123") \
         .config("spark.hadoop.fs.s3a.path.style.access", "true") \
         .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
+        .config("spark.sql.defaultCatalog", "local") \
         .getOrCreate()
 
 
@@ -52,11 +54,11 @@ def register_reconciliation_batch(spark, batch_id, source_systems, start_date, e
         "created_at": datetime.now(),
         "completed_at": None
     }])
-    
+
     # Save to Iceberg table
     loader = IcebergLoader(spark)
     loader.load_reconciliation_batch(batch_df)
-    
+
     print(f"Registered reconciliation batch: {batch_id}")
     return batch_df
 
@@ -69,23 +71,23 @@ def update_batch_status(spark, batch_id, status, matched_count=None, unmatched_c
         FROM local.banking.reconciliation_batches
         WHERE batch_id = '{batch_id}'
     """)
-    
+
     # Create an updated record
     update_dict = {"status": status}
-    
+
     if status == "COMPLETED":
         update_dict["completed_at"] = datetime.now()
-    
+
     if matched_count is not None:
         update_dict["matched_count"] = matched_count
-    
+
     if unmatched_count is not None:
         update_dict["unmatched_count"] = unmatched_count
-    
+
     # Calculate total transactions
     if matched_count is not None and unmatched_count is not None:
         update_dict["total_transactions"] = matched_count + unmatched_count
-    
+
     # Create a new DataFrame with the updates
     updated_batch = batch_df.select(
         *[
@@ -93,87 +95,87 @@ def update_batch_status(spark, batch_id, status, matched_count=None, unmatched_c
             for col_name in batch_df.columns
         ]
     )
-    
+
     # Delete the old record and insert the new one
     spark.sql(f"""
         DELETE FROM local.banking.reconciliation_batches
         WHERE batch_id = '{batch_id}'
     """)
-    
+
     # Save the updated record
     loader = IcebergLoader(spark)
     loader.load_reconciliation_batch(updated_batch)
-    
+
     print(f"Updated batch status to {status}")
 
 
 def run_reconciliation(args):
     """Run the reconciliation process."""
     print("Starting banking reconciliation process...")
-    
+
     # Parse date arguments
     if args.start_date:
         start_date = datetime.fromisoformat(args.start_date)
     else:
         start_date = datetime.now() - timedelta(days=7)
-    
+
     if args.end_date:
         end_date = datetime.fromisoformat(args.end_date)
     else:
         end_date = datetime.now()
-    
+
     # Parse source systems
     source_systems = args.source_systems.split(",")
     if len(source_systems) < 2:
         raise ValueError("At least two source systems are required for reconciliation")
-    
+
     # Create Spark session
     spark = create_spark_session()
-    
+
     try:
         # Generate batch ID
         batch_id = f"RECON-{uuid.uuid4().hex[:8]}"
-        
+
         # Register reconciliation batch
         register_reconciliation_batch(spark, batch_id, source_systems, start_date, end_date)
         update_batch_status(spark, batch_id, "IN_PROGRESS")
-        
+
         # Initialize components
         extractor = TransactionExtractor(spark)
         transformer = TransactionTransformer(spark)
         matcher = TransactionMatcher(spark)
         reporter = ReconciliationReporter(spark)
         loader = IcebergLoader(spark)
-        
+
         # Extract transactions from source systems
         print(f"Extracting transactions from {source_systems} between {start_date} and {end_date}...")
         transactions_by_source = extractor.extract_transactions_for_reconciliation(
             source_systems, start_date, end_date
         )
-        
+
         # Transform transactions for reconciliation
         print("Transforming transactions...")
         prepared_transactions = transformer.prepare_for_reconciliation(transactions_by_source)
-        
+
         # Define primary and secondary sources
         primary_source = source_systems[0]
         primary_df = prepared_transactions[primary_source]
-        
+
         # Initialize counters
         total_matched = 0
         total_unmatched = 0
-        
+
         # For each secondary source, reconcile with primary
         for secondary_source in source_systems[1:]:
             secondary_df = prepared_transactions[secondary_source]
-            
+
             print(f"Reconciling {primary_source} with {secondary_source}...")
-            
+
             # Match transactions
             matched_df, unmatched_primary_df, unmatched_secondary_df = matcher.match_transactions(
                 primary_df, secondary_df, match_strategy=args.match_strategy
             )
-            
+
             # Create reconciliation results
             results_df = matcher.create_reconciliation_results(
                 batch_id,
@@ -183,22 +185,22 @@ def run_reconciliation(args):
                 primary_source,
                 secondary_source
             )
-            
+
             # Save reconciliation results
             loader.load_reconciliation_results(results_df)
-            
+
             # Update counters
             matched_count = matched_df.count()
             unmatched_primary_count = unmatched_primary_df.count()
             unmatched_secondary_count = unmatched_secondary_df.count()
-            
+
             total_matched += matched_count
             total_unmatched += (unmatched_primary_count + unmatched_secondary_count)
-            
+
             print(f"Reconciliation results: {matched_count} matched, "
                   f"{unmatched_primary_count} unmatched in {primary_source}, "
                   f"{unmatched_secondary_count} unmatched in {secondary_source}")
-        
+
         # Generate summary report
         print("Generating reconciliation reports...")
         results_df = spark.sql(f"""
@@ -206,25 +208,25 @@ def run_reconciliation(args):
             FROM local.banking.reconciliation_results
             WHERE batch_id = '{batch_id}'
         """)
-        
+
         summary_report = reporter.generate_summary_report(results_df)
         discrepancy_report = reporter.generate_discrepancy_report(results_df)
-        
+
         # Export reports to CSV
         os.makedirs("data/reconciled", exist_ok=True)
         reporter.export_report_to_csv(summary_report, f"data/reconciled/{batch_id}_summary.csv")
         reporter.export_report_to_csv(discrepancy_report, f"data/reconciled/{batch_id}_discrepancies.csv")
-        
+
         # Update batch status
         update_batch_status(
-            spark, batch_id, "COMPLETED", 
-            matched_count=total_matched, 
+            spark, batch_id, "COMPLETED",
+            matched_count=total_matched,
             unmatched_count=total_unmatched
         )
-        
+
         print(f"Reconciliation completed successfully. Batch ID: {batch_id}")
         print(f"Total matched: {total_matched}, Total unmatched: {total_unmatched}")
-        
+
     except Exception as e:
         print(f"Error during reconciliation: {str(e)}")
         if 'batch_id' in locals():
@@ -256,7 +258,7 @@ def main():
         choices=["exact", "fuzzy", "hybrid"],
         help="Strategy for matching transactions"
     )
-    
+
     args = parser.parse_args()
     run_reconciliation(args)
 

@@ -48,3 +48,7 @@ logs/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Test files
+scripts/test_*.py
+test_*.py
