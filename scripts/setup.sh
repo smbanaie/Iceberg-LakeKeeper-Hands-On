@@ -12,9 +12,7 @@ docker-compose up -d
 echo "Waiting for services to be ready..."
 sleep 15
 
-# Initialize MinIO buckets
-echo "Initializing MinIO buckets..."
-docker exec jupyter python /opt/bitnami/spark/scripts/init_minio.py
+# No MinIO initialization needed
 
 # Initialize the Iceberg environment
 echo "Initializing Iceberg environment..."
@@ -37,4 +35,4 @@ echo "You can now access:"
 echo "- Spark Master UI: http://localhost:8082"
 echo "- Spark Worker UI: http://localhost:8083"
 echo "- Jupyter Notebook: http://localhost:8889"
-echo "- MinIO Console: http://localhost:9001 (login: minio / minio123)"
+echo "- PostgreSQL: localhost:5432 (user: iceberg, password: iceberg)"

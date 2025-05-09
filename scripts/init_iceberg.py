@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-Script to initialize the Iceberg environment by creating MinIO buckets and Iceberg tables.
+Script to initialize Iceberg tables for the banking reconciliation system.
 """
 
-import boto3
-from botocore.client import Config
-import time
+import os
 from pyspark.sql import SparkSession
 
 def create_spark_session():
     """Create a Spark session with Iceberg configuration."""
+    # Create warehouse directory if it doesn't exist
+    warehouse_dir = "/opt/bitnami/spark/warehouse"
+    os.makedirs(warehouse_dir, exist_ok=True)
+    
     return SparkSession.builder \
         .appName("Iceberg Initialization") \
         .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
@@ -17,62 +19,19 @@ def create_spark_session():
         .config("spark.sql.catalog.spark_catalog.type", "hive") \
         .config("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog") \
         .config("spark.sql.catalog.local.type", "hadoop") \
-        .config("spark.sql.catalog.local.warehouse", "s3a://warehouse/iceberg-warehouse/") \
-        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
-        .config("spark.hadoop.fs.s3a.access.key", "minio") \
-        .config("spark.hadoop.fs.s3a.secret.key", "minio123") \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
-        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
+        .config("spark.sql.catalog.local.warehouse", f"file://{warehouse_dir}") \
         .config("spark.sql.defaultCatalog", "local") \
         .getOrCreate()
 
-def initialize_minio_buckets():
-    """Initialize MinIO buckets for data storage."""
-    print("Initializing MinIO buckets...")
-
-    # Initialize MinIO client
-    s3_client = boto3.client(
-        's3',
-        endpoint_url='http://minio:9000',
-        aws_access_key_id='minio',
-        aws_secret_access_key='minio123',
-        config=Config(signature_version='s3v4'),
-        region_name='us-east-1'
-    )
-
-    # Create buckets if they don't exist
-    buckets = ['warehouse', 'raw-data', 'stage-data', 'reconciled-data']
-
-    # List existing buckets
-    try:
-        existing_buckets = [bucket['Name'] for bucket in s3_client.list_buckets()['Buckets']]
-    except Exception as e:
-        print(f"Error listing buckets: {str(e)}")
-        print("Waiting for MinIO to be ready...")
-        time.sleep(10)  # Wait for MinIO to be ready
-        existing_buckets = [bucket['Name'] for bucket in s3_client.list_buckets()['Buckets']]
-
-    # Create missing buckets
-    for bucket in buckets:
-        if bucket not in existing_buckets:
-            try:
-                s3_client.create_bucket(Bucket=bucket)
-                print(f"Created bucket: {bucket}")
-            except Exception as e:
-                print(f"Error creating bucket {bucket}: {str(e)}")
-        else:
-            print(f"Bucket already exists: {bucket}")
-
-def create_iceberg_tables(spark):
-    """Create Iceberg tables for the banking reconciliation system."""
-    print("Creating Iceberg tables...")
-
-    # Create the banking namespace
+def create_banking_namespace(spark):
+    """Create the banking namespace."""
+    print("Creating banking namespace...")
     spark.sql("CREATE NAMESPACE IF NOT EXISTS local.banking")
-    print("Created namespace: local.banking")
+    print("Banking namespace created successfully.")
 
-    # Create source_transactions table
+def create_source_transactions_table(spark):
+    """Create the source_transactions table."""
+    print("Creating source_transactions table...")
     spark.sql("""
     CREATE TABLE IF NOT EXISTS local.banking.source_transactions (
       transaction_id STRING,
@@ -90,9 +49,11 @@ def create_iceberg_tables(spark):
     USING iceberg
     PARTITIONED BY (days(transaction_date), source_system)
     """)
-    print("Created table: local.banking.source_transactions")
+    print("source_transactions table created successfully.")
 
-    # Create reconciliation_results table
+def create_reconciliation_results_table(spark):
+    """Create the reconciliation_results table."""
+    print("Creating reconciliation_results table...")
     spark.sql("""
     CREATE TABLE IF NOT EXISTS local.banking.reconciliation_results (
       reconciliation_id STRING,
@@ -108,9 +69,11 @@ def create_iceberg_tables(spark):
     USING iceberg
     PARTITIONED BY (days(reconciliation_timestamp), match_status)
     """)
-    print("Created table: local.banking.reconciliation_results")
+    print("reconciliation_results table created successfully.")
 
-    # Create reconciliation_batches table
+def create_reconciliation_batches_table(spark):
+    """Create the reconciliation_batches table."""
+    print("Creating reconciliation_batches table...")
     spark.sql("""
     CREATE TABLE IF NOT EXISTS local.banking.reconciliation_batches (
       batch_id STRING,
@@ -127,35 +90,29 @@ def create_iceberg_tables(spark):
     )
     USING iceberg
     """)
-    print("Created table: local.banking.reconciliation_batches")
+    print("reconciliation_batches table created successfully.")
 
 def main():
-    """Main function to initialize the Iceberg environment."""
-    print("Starting Iceberg environment initialization...")
-
-    # Initialize MinIO buckets
-    initialize_minio_buckets()
-
+    """Main function to initialize Iceberg tables."""
+    print("Initializing Iceberg tables...")
+    
     # Create Spark session
     spark = create_spark_session()
-
+    
     try:
-        # Create Iceberg tables
-        create_iceberg_tables(spark)
-
-        # List tables to verify
-        print("\nVerifying tables...")
-        tables = spark.sql("SHOW TABLES IN local.banking").collect()
-        if tables:
-            print("Tables in local.banking namespace:")
-            for table in tables:
-                print(f"  - {table.tableName}")
-        else:
-            print("No tables found in local.banking namespace.")
-
-        print("\nIceberg environment initialization completed successfully.")
+        # Create banking namespace
+        create_banking_namespace(spark)
+        
+        # Create tables
+        create_source_transactions_table(spark)
+        create_reconciliation_results_table(spark)
+        create_reconciliation_batches_table(spark)
+        
+        print("Iceberg tables initialized successfully.")
     except Exception as e:
-        print(f"Error during initialization: {str(e)}")
+        print(f"Error initializing Iceberg tables: {str(e)}")
+        import traceback
+        traceback.print_exc()
     finally:
         spark.stop()
 
