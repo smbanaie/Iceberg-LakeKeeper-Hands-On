@@ -1,545 +1,422 @@
 # Apache Iceberg Banking Reconciliation System
 
 ## Overview
-This project implements a scalable data platform using Apache Iceberg for banking transaction reconciliation. It demonstrates Iceberg's advanced features through a practical banking use case that matches transactions across systems to identify discrepancies.
+This project implements a scalable data platform using Apache Iceberg for banking transaction reconciliation. It demonstrates Iceberg's advanced features through a practical banking use case that matches transactions across multiple systems to identify discrepancies and ensure data consistency.
 
 ## Business Context
-Banks operate multiple systems that process transactions (core banking, card processors, payment gateways). Reconciliation ensures data consistency by comparing transactions across these systems, identifying exceptions, and maintaining audit trails for compliance.
+Banks operate multiple systems that process transactions (core banking, card processors, payment gateways). Reconciliation ensures data consistency by comparing transactions across these systems, identifying exceptions, and maintaining audit trails for compliance and regulatory requirements.
 
 ## Key Features
-- Scalable data platform using Apache Iceberg
-- Docker-based environment for easy development and testing
-- Transaction processing from multiple banking sources
-- Advanced reconciliation engine with matching algorithms
-- Demonstration of Iceberg's schema evolution, time travel, and ACID transactions
+- **Scalable Data Platform**: Apache Iceberg with advanced table format features
+- **Docker-based Environment**: Complete containerized setup for easy development
+- **Multi-System Integration**: Process transactions from core banking, card processors, and payment gateways
+- **Advanced Reconciliation Engine**: Sophisticated matching algorithms with configurable strategies
+- **Iceberg Advanced Features**: Schema evolution, time travel, ACID transactions, and incremental processing
+- **Real-time Monitoring**: Web UIs for Spark, MinIO, and PostgreSQL
 
 ## Technical Architecture
-- **Apache Spark**: For distributed data processing
-- **Apache Iceberg**: For table format with advanced features
-- **MinIO**: S3-compatible object storage
-- **PostgreSQL**: For Iceberg catalog service
-- **Docker**: For containerized development environment
+
+### Core Components
+- **Apache Spark 3.3.1**: Distributed data processing engine
+- **Apache Iceberg**: Advanced table format with ACID transactions
+- **MinIO**: S3-compatible object storage for data lake
+- **PostgreSQL 14**: Iceberg catalog service and metadata storage
+- **Jupyter Notebooks**: Interactive data exploration and development
+- **Docker & Docker Compose**: Containerized environment
+
+### Data Flow
+```
+Raw Transactions → ETL Processing → Iceberg Tables → Reconciliation Engine → Results & Reports
+```
 
 ## Project Structure
 ```
-banking-reconciliation-iceberg/
-│
+iceberg-bank-recon/
 ├── docker/                    # Docker configuration
 │   ├── docker-compose.yml     # Multi-container setup
-│   ├── spark/                 # Spark with Iceberg configuration
-│   │   ├── Dockerfile
-│   │   └── conf/
-│   ├── minio/                 # S3-compatible storage
-│   └── postgres/              # Catalog service
+│   └── spark/                 # Spark Docker images
+│       ├── Dockerfile.master  # Spark master container
+│       ├── Dockerfile.worker  # Spark worker container
+│       ├── Dockerfile.jupyter # Jupyter container
+│       ├── conf/              # Spark configuration
+│       └── requirements.txt   # Python dependencies
 │
-├── data/                      # Sample datasets
+├── data/                      # Data directories
 │   ├── raw/                   # Raw transaction files
 │   ├── stage/                 # Staged data
 │   └── reconciled/            # Reconciliation results
 │
-├── notebooks/                 # Jupyter notebooks for exploration
-│
 ├── src/                       # Source code
-│   ├── main/
-│   │   └── python/
-│   │       ├── models/        # Data models
-│   │       ├── etl/           # ETL processes
-│   │       ├── reconciliation/ # Reconciliation logic
-│   │       └── api/           # Optional REST API
-│   └── test/                  # Unit and integration tests
+│   ├── main/python/
+│   │   ├── etl/              # ETL processes
+│   │   │   └── loaders.py    # Iceberg data loaders
+│   │   ├── models/           # Data models
+│   │   ├── reconciliation/   # Reconciliation logic
+│   │   └── config.py         # Configuration management
+│   └── test/python/          # Unit tests
 │
 ├── scripts/                   # Utility scripts
+│   ├── setup.sh              # Complete environment setup
+│   ├── init_minio.py         # MinIO bucket initialization
+│   ├── init_iceberg.py       # Iceberg table creation
+│   ├── generate_sample_data.py # Sample data generation
+│   ├── ingest_data.py        # Data ingestion
+│   ├── test_setup.py         # Setup verification
+│   └── run_tests.py          # Test execution
 │
-├── README.md                  # Project documentation
-└── requirements.txt           # Python dependencies
+├── notebooks/                 # Jupyter notebooks
+├── requirements.txt           # Python dependencies
+└── README.md                 # This documentation
 ```
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose
 - Git
+- At least 4GB RAM available for containers
 
-### Setup
-1. Clone the repository
-2. Run `./scripts/setup.sh` to initialize the environment
-3. Access Jupyter notebooks at http://localhost:8889
-4. Follow the example notebooks to understand the system
-
-### Manual Setup
-If you prefer to set up the system manually:
-
-1. Create the necessary directories:
-   ```bash
-   mkdir -p data/raw data/stage data/reconciled
-   ```
-
-2. Start the Docker containers:
-   ```bash
-   docker-compose up -d
-   ```
-
-3. Initialize MinIO buckets:
-   ```bash
-   docker exec -it jupyter python /opt/bitnami/spark/scripts/init_minio.py
-   ```
-
-4. Initialize Iceberg tables:
-   ```bash
-   docker exec -it jupyter python /opt/bitnami/spark/scripts/init_iceberg.py
-   ```
-
-5. Generate and ingest sample data:
-   ```bash
-   docker exec -it jupyter python /opt/bitnami/spark/scripts/generate_sample_data.py
-   docker exec -it jupyter python /opt/bitnami/spark/scripts/ingest_data.py
-   ```
-
-### Troubleshooting
-
-#### MinIO Connection Issues
-- Ensure MinIO container is running: `docker ps | grep minio`
-- Check MinIO logs: `docker logs minio`
-- Verify MinIO credentials in configuration match those in docker-compose.yml
-- Ensure the warehouse bucket exists: `docker exec -it jupyter python /opt/bitnami/spark/scripts/init_minio.py`
-
-#### Spark Configuration Issues
-- Verify Spark configuration is properly mounted: `docker exec -it jupyter ls -la /opt/bitnami/spark/conf`
-- Check Spark logs: `docker logs spark-master`
-- Run the configuration test: `docker exec -it jupyter python /opt/bitnami/spark/scripts/run_tests.py`
-
-#### Iceberg Table Issues
-- Ensure Iceberg tables are created: `docker exec -it jupyter python /opt/bitnami/spark/scripts/init_iceberg.py`
-- Check for errors in the Spark UI: http://localhost:8082
-- Verify the warehouse path is correctly set to `s3a://warehouse/`
-
-## Advanced Iceberg Features Demonstrated
-- **Schema Evolution**: Add new fields to transaction tables without rebuilding
-- **Time Travel**: Query historical reconciliation states for audit
-- **Partition Evolution**: Optimize partitioning based on query patterns
-- **Optimized Reads**: Leverage predicate pushdown and file pruning
-- **ACID Transactions**: Ensure consistency during reconciliation
-- **Incremental Processing**: Process only new transactions since last run
-
-## Implementation Guide
-
-### Data Storage
-
-#### MinIO Buckets
-
-The system uses the following MinIO buckets:
-
-- **warehouse**: Main storage for Iceberg tables
-- **raw-data**: Storage for raw transaction data
-- **stage-data**: Storage for intermediate data
-- **reconciled-data**: Storage for reconciliation results
-
-#### Iceberg Tables
-
-The system uses the following Iceberg tables:
-
-- **source_transactions**: Stores transaction data from all source systems
-- **reconciliation_results**: Stores the results of reconciliation processes
-- **reconciliation_batches**: Stores metadata about reconciliation batches
-
-### Configuration
-
-#### Spark Configuration
-
-Critical Spark configuration parameters:
-
-```
-spark.sql.extensions = org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
-spark.sql.catalog.spark_catalog = org.apache.iceberg.spark.SparkSessionCatalog
-spark.sql.catalog.spark_catalog.type = hive
-spark.sql.catalog.local = org.apache.iceberg.spark.SparkCatalog
-spark.sql.catalog.local.type = hadoop
-spark.sql.catalog.local.warehouse = s3a://warehouse/iceberg-warehouse/
-spark.hadoop.fs.s3a.endpoint = http://minio:9000
-spark.hadoop.fs.s3a.access.key = minio
-spark.hadoop.fs.s3a.secret.key = minio123
-spark.hadoop.fs.s3a.path.style.access = true
-spark.hadoop.fs.s3a.impl = org.apache.hadoop.fs.s3a.S3AFileSystem
-spark.hadoop.fs.s3a.connection.ssl.enabled = false
-spark.sql.defaultCatalog = local
-```
-
-#### Important Configuration Notes
-
-1. The warehouse path must include a subdirectory: `s3a://warehouse/iceberg-warehouse/`
-2. SSL should be disabled for local MinIO: `spark.hadoop.fs.s3a.connection.ssl.enabled = false`
-3. Set the default catalog: `spark.sql.defaultCatalog = local`
-
-### Data Model
-
-#### Transaction Model
-
-The Transaction model includes the following fields:
-
-- **transaction_id**: Unique identifier for the transaction
-- **source_system**: System where the transaction originated
-- **transaction_date**: Date and time of the transaction
-- **amount**: Transaction amount
-- **account_id**: Account identifier
-- **transaction_type**: Type of transaction (deposit, withdrawal, etc.)
-- **reference_id**: Reference identifier
-- **status**: Transaction status (completed, pending, failed, etc.)
-- **payload**: Additional transaction data
-- **created_at**: Creation timestamp
-- **processing_timestamp**: Processing timestamp
-
-#### Reconciliation Results Model
-
-The reconciliation results include:
-
-- **reconciliation_id**: Unique identifier for the reconciliation record
-- **batch_id**: Identifier for the reconciliation batch
-- **primary_transaction_id**: Transaction ID from the primary system
-- **secondary_transaction_id**: Transaction ID from the secondary system
-- **match_status**: Status of the match (MATCHED, PARTIAL, UNMATCHED)
-- **discrepancy_type**: Type of discrepancy if any
-- **discrepancy_amount**: Amount of discrepancy if any
-- **reconciliation_timestamp**: Timestamp of reconciliation
-- **notes**: Additional notes
-
-#### Reconciliation Batch Model
-
-The reconciliation batch includes:
-
-- **batch_id**: Unique identifier for the batch
-- **reconciliation_date**: Date of reconciliation
-- **source_systems**: Array of source systems included in the batch
-- **start_date**: Start date for transaction filtering
-- **end_date**: End date for transaction filtering
-- **status**: Batch status (PENDING, IN_PROGRESS, COMPLETED, FAILED)
-- **total_transactions**: Total number of transactions processed
-- **matched_count**: Number of matched transactions
-- **unmatched_count**: Number of unmatched transactions
-- **created_at**: Creation timestamp
-- **completed_at**: Completion timestamp
-
-### Implementation Components
-
-#### ETL Components
-
-1. **Extractors**: Extract transaction data from various sources
-2. **Transformers**: Transform and normalize transaction data
-3. **Loaders**: Load data into Iceberg tables
-
-#### Reconciliation Components
-
-1. **Matcher**: Match transactions across systems using exact, fuzzy, or hybrid matching
-2. **Reporter**: Generate reconciliation reports
-
-### Reconciliation Process
-
-The reconciliation process follows these steps:
-
-1. Create a reconciliation batch with a unique ID
-2. Extract transactions from source systems for the specified date range
-3. Transform and normalize transactions for comparison
-4. Match transactions using the specified strategy (exact, fuzzy, or hybrid)
-5. Generate reconciliation results
-6. Create summary and discrepancy reports
-7. Update the batch status with match statistics
-
-### Testing
-
-#### Unit Tests
-
-The system includes unit tests for:
-
-- **Spark Configuration**: Verifies Spark is properly configured
-- **Transaction Model**: Tests the Transaction class functionality
-- **Matcher**: Tests the transaction matching logic
-- **Reconciliation Batch**: Tests batch creation and updates
-
-#### Running Tests
-
-Run tests using the provided script:
-
+### One-Command Setup
 ```bash
-docker exec jupyter python /opt/bitnami/spark/scripts/run_tests.py
+# Clone the repository
+git clone <repository-url>
+cd iceberg-bank-recon
+
+# Run the complete setup
+./scripts/setup.sh
 ```
 
-### Schema Issues
-
-When working with complex data types like arrays:
-- Always define explicit schemas for DataFrames
-- Use appropriate data types (StringType, TimestampType, ArrayType, etc.)
-- Ensure schema consistency when updating records
+The setup script will:
+1. ✅ Start all Docker containers (Spark, MinIO, PostgreSQL, Jupyter)
+2. ✅ Initialize MinIO buckets (warehouse, raw-data, stage-data, reconciled-data)
+3. ✅ Create Iceberg tables (source_transactions, reconciliation_results, reconciliation_batches)
+4. ✅ Generate sample transaction data (~15,000 transactions across 3 systems)
+5. ✅ Load data into Iceberg tables
+6. ✅ Run verification tests
 
 ### Access Points
-
+After setup, access the system at:
+- **Jupyter Notebooks**: http://localhost:8889
 - **Spark Master UI**: http://localhost:8082
 - **Spark Worker UI**: http://localhost:8083
-- **Jupyter Notebook**: http://localhost:8889
-- **MinIO Console**: http://localhost:9001 (login: minio / minio123)
+- **MinIO Console**: http://localhost:9001 (login: minio/minio123)
+- **PostgreSQL**: localhost:5432 (user: iceberg, password: iceberg)
 
-### Best Practices
+## Data Model
 
-1. **Schema Management**: Always define explicit schemas for complex data types
-2. **Error Handling**: Implement comprehensive error handling and logging
-3. **Idempotent Operations**: Design operations to be safely repeatable
-4. **Testing**: Write tests for all critical components
-5. **Documentation**: Document configuration, data models, and processes
-
-## Implementation Guide
-
-### Data Storage
-
-#### MinIO Buckets
-
-The system uses the following MinIO buckets:
-
-- **warehouse**: Main storage for Iceberg tables
-- **raw-data**: Storage for raw transaction data
-- **stage-data**: Storage for intermediate data
-- **reconciled-data**: Storage for reconciliation results
-
-#### Iceberg Tables
-
-The system uses the following Iceberg tables:
-
-- **source_transactions**: Stores transaction data from all source systems
-- **reconciliation_results**: Stores the results of reconciliation processes
-- **reconciliation_batches**: Stores metadata about reconciliation batches
-
-### Configuration
-
-#### Spark Configuration
-
-Critical Spark configuration parameters:
-
-```
-spark.sql.extensions = org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
-spark.sql.catalog.spark_catalog = org.apache.iceberg.spark.SparkSessionCatalog
-spark.sql.catalog.spark_catalog.type = hive
-spark.sql.catalog.local = org.apache.iceberg.spark.SparkCatalog
-spark.sql.catalog.local.type = hadoop
-spark.sql.catalog.local.warehouse = s3a://warehouse/iceberg-warehouse/
-spark.hadoop.fs.s3a.endpoint = http://minio:9000
-spark.hadoop.fs.s3a.access.key = minio
-spark.hadoop.fs.s3a.secret.key = minio123
-spark.hadoop.fs.s3a.path.style.access = true
-spark.hadoop.fs.s3a.impl = org.apache.hadoop.fs.s3a.S3AFileSystem
-spark.hadoop.fs.s3a.connection.ssl.enabled = false
-spark.sql.defaultCatalog = local
+### Transaction Schema
+```sql
+CREATE TABLE source_transactions (
+  transaction_id STRING,
+  source_system STRING,
+  transaction_date TIMESTAMP,
+  amount DECIMAL(18,2),
+  account_id STRING,
+  transaction_type STRING,
+  reference_id STRING,
+  status STRING,
+  payload STRING,
+  created_at TIMESTAMP,
+  processing_timestamp TIMESTAMP
+)
+USING iceberg
+PARTITIONED BY (days(transaction_date), source_system)
 ```
 
-#### Important Configuration Notes
+### Reconciliation Results Schema
+```sql
+CREATE TABLE reconciliation_results (
+  reconciliation_id STRING,
+  batch_id STRING,
+  primary_transaction_id STRING,
+  secondary_transaction_id STRING,
+  match_status STRING,
+  discrepancy_type STRING,
+  discrepancy_amount DECIMAL(18,2),
+  reconciliation_timestamp TIMESTAMP,
+  notes STRING
+)
+USING iceberg
+PARTITIONED BY (days(reconciliation_timestamp), match_status)
+```
 
-1. The warehouse path must include a subdirectory: `s3a://warehouse/iceberg-warehouse/`
-2. SSL should be disabled for local MinIO: `spark.hadoop.fs.s3a.connection.ssl.enabled = false`
-3. Set the default catalog: `spark.sql.defaultCatalog = local`
+### Reconciliation Batches Schema
+```sql
+CREATE TABLE reconciliation_batches (
+  batch_id STRING,
+  reconciliation_date TIMESTAMP,
+  source_systems ARRAY<STRING>,
+  start_date TIMESTAMP,
+  end_date TIMESTAMP,
+  status STRING,
+  total_transactions BIGINT,
+  matched_count BIGINT,
+  unmatched_count BIGINT,
+  created_at TIMESTAMP,
+  completed_at TIMESTAMP
+)
+USING iceberg
+```
 
-### Data Model
+## Configuration
 
-#### Transaction Model
+### Spark Configuration
+The system uses the following critical Spark configurations:
 
-The Transaction model includes the following fields:
+```python
+spark = SparkSession.builder \
+    .appName("Banking Reconciliation") \
+    .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
+    .config("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog") \
+    .config("spark.sql.catalog.spark_catalog.type", "hive") \
+    .config("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog") \
+    .config("spark.sql.catalog.local.type", "hadoop") \
+    .config("spark.sql.catalog.local.warehouse", "s3a://warehouse/iceberg-warehouse/") \
+    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
+    .config("spark.hadoop.fs.s3a.access.key", "minio") \
+    .config("spark.hadoop.fs.s3a.secret.key", "minio123") \
+    .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+    .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
+    .config("spark.sql.defaultCatalog", "local") \
+    .getOrCreate()
+```
 
-- **transaction_id**: Unique identifier for the transaction
-- **source_system**: System where the transaction originated
-- **transaction_date**: Date and time of the transaction
-- **amount**: Transaction amount
-- **account_id**: Account identifier
-- **transaction_type**: Type of transaction (deposit, withdrawal, etc.)
-- **reference_id**: Reference identifier
-- **status**: Transaction status (completed, pending, failed, etc.)
-- **payload**: Additional transaction data
-- **created_at**: Creation timestamp
-- **processing_timestamp**: Processing timestamp
+### MinIO Configuration
+- **Endpoint**: http://localhost:9000
+- **Console**: http://localhost:9001
+- **Access Key**: minio
+- **Secret Key**: minio123
+- **Buckets**: warehouse, raw-data, stage-data, reconciled-data
 
-#### Reconciliation Results Model
+## Usage Examples
 
-The reconciliation results include:
+### 1. Data Ingestion
+```python
+from src.main.python.etl.loaders import IcebergLoader
 
-- **reconciliation_id**: Unique identifier for the reconciliation record
-- **batch_id**: Identifier for the reconciliation batch
-- **primary_transaction_id**: Transaction ID from the primary system
-- **secondary_transaction_id**: Transaction ID from the secondary system
-- **match_status**: Status of the match (MATCHED, PARTIAL, UNMATCHED)
-- **discrepancy_type**: Type of discrepancy if any
-- **discrepancy_amount**: Amount of discrepancy if any
-- **reconciliation_timestamp**: Timestamp of reconciliation
-- **notes**: Additional notes
+# Initialize loader
+loader = IcebergLoader(spark)
 
-#### Reconciliation Batch Model
+# Load transactions from CSV
+loader.load_transactions_from_csv("/path/to/transactions.csv")
 
-The reconciliation batch includes:
+# Load incrementally (avoiding duplicates)
+loader.load_transactions_incrementally(df, "core_banking")
+```
 
-- **batch_id**: Unique identifier for the batch
-- **reconciliation_date**: Date of reconciliation
-- **source_systems**: Array of source systems included in the batch
-- **start_date**: Start date for transaction filtering
-- **end_date**: End date for transaction filtering
-- **status**: Batch status (PENDING, IN_PROGRESS, COMPLETED, FAILED)
-- **total_transactions**: Total number of transactions processed
-- **matched_count**: Number of matched transactions
-- **unmatched_count**: Number of unmatched transactions
-- **created_at**: Creation timestamp
-- **completed_at**: Completion timestamp
+### 2. Reconciliation Process
+```python
+# Create reconciliation batch
+batch_id = "RECON-2025-01-01"
+source_systems = ["core_banking", "card_processor"]
 
-### Implementation Components
+# Run reconciliation
+reconciler = ReconciliationEngine(spark)
+results = reconciler.reconcile_transactions(
+    batch_id=batch_id,
+    source_systems=source_systems,
+    start_date="2025-01-01",
+    end_date="2025-01-01"
+)
+```
 
-#### ETL Components
+### 3. Time Travel Queries
+```python
+# Query historical data
+historical_data = spark.sql("""
+    SELECT * FROM local.banking.source_transactions
+    FOR TIMESTAMP AS OF '2025-01-01 10:00:00'
+    WHERE source_system = 'core_banking'
+""")
+```
 
-1. **Extractors**: Extract transaction data from various sources
-2. **Transformers**: Transform and normalize transaction data
-3. **Loaders**: Load data into Iceberg tables
+### 4. Schema Evolution
+```python
+# Add new column to existing table
+spark.sql("""
+    ALTER TABLE local.banking.source_transactions
+    ADD COLUMN new_field STRING
+""")
+```
 
-#### Reconciliation Components
+## Advanced Iceberg Features
 
-1. **Matcher**: Match transactions across systems using exact, fuzzy, or hybrid matching
-2. **Reporter**: Generate reconciliation reports
+### 1. Schema Evolution
+- Add, drop, or rename columns without rebuilding tables
+- Maintain backward compatibility
+- Automatic schema versioning
 
-### Reconciliation Process
+### 2. Time Travel
+- Query data at any point in time
+- Audit trail for compliance
+- Rollback capabilities
 
-The reconciliation process follows these steps:
+### 3. ACID Transactions
+- Atomic operations across multiple tables
+- Consistency guarantees
+- Isolation between concurrent operations
 
-1. Create a reconciliation batch with a unique ID
-2. Extract transactions from source systems for the specified date range
-3. Transform and normalize transactions for comparison
-4. Match transactions using the specified strategy (exact, fuzzy, or hybrid)
-5. Generate reconciliation results
-6. Create summary and discrepancy reports
-7. Update the batch status with match statistics
+### 4. Partition Evolution
+- Change partitioning strategy without data migration
+- Optimize query performance
+- Automatic partition pruning
 
-### Testing
+### 5. Incremental Processing
+- Process only new data since last run
+- Efficient updates and deletes
+- Change data capture capabilities
 
-#### Unit Tests
+## Troubleshooting
 
-The system includes unit tests for:
+### Common Issues
 
-- **Spark Configuration**: Verifies Spark is properly configured
-- **Transaction Model**: Tests the Transaction class functionality
-- **Matcher**: Tests the transaction matching logic
-- **Reconciliation Batch**: Tests batch creation and updates
-
-#### Running Tests
-
-Run tests using the provided script:
-
+#### 1. MinIO Connection Issues
 ```bash
+# Check if MinIO is running
+docker ps | grep minio
+
+# Check MinIO logs
+docker logs minio
+
+# Reinitialize buckets
+docker exec jupyter python /opt/bitnami/spark/scripts/init_minio.py
+```
+
+#### 2. Spark Configuration Issues
+```bash
+# Check Spark logs
+docker logs spark-master
+
+# Verify configuration
+docker exec jupyter python /opt/bitnami/spark/scripts/test_setup.py
+```
+
+#### 3. Iceberg Table Issues
+```bash
+# Recreate tables
+docker exec jupyter python /opt/bitnami/spark/scripts/init_iceberg.py
+
+# Check table schemas
+docker exec jupyter spark-sql -e "DESCRIBE local.banking.source_transactions"
+```
+
+#### 4. Permission Issues
+```bash
+# Fix script permissions
+chmod +x scripts/setup.sh
+
+# Fix line endings (if on Windows/WSL)
+dos2unix scripts/setup.sh
+```
+
+### Performance Optimization
+
+#### 1. Spark Configuration
+```bash
+# Increase memory for large datasets
+SPARK_WORKER_MEMORY=4G
+SPARK_WORKER_CORES=4
+```
+
+#### 2. Iceberg Optimization
+```python
+# Compact small files
+spark.sql("""
+    CALL local.system.rewrite_data_files(
+        table => 'local.banking.source_transactions',
+        options => map('min-input-files','5', 'target-file-size-bytes', '104857600')
+    )
+""")
+
+# Expire old snapshots
+spark.sql("""
+    CALL local.system.expire_snapshots(
+        table => 'local.banking.source_transactions',
+        older_than => '7d'
+    )
+""")
+```
+
+## Development
+
+### Running Tests
+```bash
+# Run all tests
 docker exec jupyter python /opt/bitnami/spark/scripts/run_tests.py
+
+# Run specific test
+docker exec jupyter python -m pytest src/test/python/test_iceberg_loader.py -v
 ```
 
-### Schema Issues
+### Adding New Features
+1. Create feature branch
+2. Add tests in `src/test/python/`
+3. Update documentation
+4. Run full test suite
+5. Submit pull request
 
-When working with complex data types like arrays:
-- Always define explicit schemas for DataFrames
-- Use appropriate data types (StringType, TimestampType, ArrayType, etc.)
-- Ensure schema consistency when updating records
+### Code Style
+- Follow PEP 8 for Python code
+- Use type hints where appropriate
+- Add docstrings to all functions
+- Write unit tests for new features
 
-### Access Points
+## Monitoring and Logging
 
-- **Spark Master UI**: http://localhost:8082
-- **Spark Worker UI**: http://localhost:8083
-- **Jupyter Notebook**: http://localhost:8889
-- **MinIO Console**: http://localhost:9001 (login: minio / minio123)
+### Spark UI
+- Monitor job progress and performance
+- Debug failed applications
+- Analyze query plans
 
-### Best Practices
+### MinIO Console
+- Monitor storage usage
+- Manage buckets and objects
+- Set up access policies
 
-1. **Schema Management**: Always define explicit schemas for complex data types
-2. **Error Handling**: Implement comprehensive error handling and logging
-3. **Idempotent Operations**: Design operations to be safely repeatable
-4. **Testing**: Write tests for all critical components
-5. **Documentation**: Document configuration, data models, and processes
-
-### Example Output
-
-#### Iceberg Table Schema
-
-```
-Schema for source_transactions:
-+--------------------+----------------------+-------+
-|col_name            |data_type             |comment|
-+--------------------+----------------------+-------+
-|transaction_id      |string                |       |
-|source_system       |string                |       |
-|transaction_date    |timestamp             |       |
-|amount              |decimal(18,2)         |       |
-|account_id          |string                |       |
-|transaction_type    |string                |       |
-|reference_id        |string                |       |
-|status              |string                |       |
-|payload             |string                |       |
-|created_at          |timestamp             |       |
-|processing_timestamp|timestamp             |       |
-|                    |                      |       |
-|# Partitioning      |                      |       |
-|Part 0              |days(transaction_date)|       |
-|Part 1              |source_system         |       |
-+--------------------+----------------------+-------+
-
-Schema for reconciliation_results:
-+------------------------+------------------------------+-------+
-|col_name                |data_type                     |comment|
-+------------------------+------------------------------+-------+
-|reconciliation_id       |string                        |       |
-|batch_id                |string                        |       |
-|primary_transaction_id  |string                        |       |
-|secondary_transaction_id|string                        |       |
-|match_status            |string                        |       |
-|discrepancy_type        |string                        |       |
-|discrepancy_amount      |decimal(18,2)                 |       |
-|reconciliation_timestamp|timestamp                     |       |
-|notes                   |string                        |       |
-|                        |                              |       |
-|# Partitioning          |                              |       |
-|Part 0                  |days(reconciliation_timestamp)|       |
-|Part 1                  |match_status                  |       |
-+------------------------+------------------------------+-------+
-
-Schema for reconciliation_batches:
-+-------------------+-------------+-------+
-|col_name           |data_type    |comment|
-+-------------------+-------------+-------+
-|batch_id           |string       |       |
-|reconciliation_date|timestamp    |       |
-|source_systems     |array<string>|       |
-|start_date         |timestamp    |       |
-|end_date           |timestamp    |       |
-|status             |string       |       |
-|total_transactions |bigint       |       |
-|matched_count      |bigint       |       |
-|unmatched_count    |bigint       |       |
-|created_at         |timestamp    |       |
-|completed_at       |timestamp    |       |
-|                   |             |       |
-|# Partitioning     |             |       |
-|Not partitioned    |             |       |
-+-------------------+-------------+-------+
+### Application Logs
+```bash
+# View container logs
+docker logs jupyter
+docker logs spark-master
+docker logs minio
 ```
 
-#### Sample Reconciliation Batch
+## Production Considerations
 
-```
-+-------------+--------------------------+------------------------------+--------------------------+--------------------------+---------+----------
----------+-------------+---------------+--------------------------+--------------------------+
-|batch_id     |reconciliation_date       |source_systems                |start_date                |end_date                  |status   |total_tran
-nsactions|matched_count|unmatched_count|created_at                |completed_at              |
-+-------------+--------------------------+------------------------------+--------------------------+--------------------------+---------+----------
----------+-------------+---------------+--------------------------+--------------------------+
-|TEST-caf44569|2025-05-09 19:50:58.894405|[core_banking, card_processor]|2025-05-09 19:50:58.894411|2025-05-09 19:50:58.894411|COMPLETED|100
-         |80           |20             |2025-05-09 19:50:58.894412|2025-05-09 19:50:58.894412|
-+-------------+--------------------------+------------------------------+--------------------------+--------------------------+---------+----------
----------+-------------+---------------+--------------------------+--------------------------+
-```
+### Security
+- Use proper authentication for MinIO
+- Implement SSL/TLS for all connections
+- Set up proper network isolation
+- Use secrets management for credentials
 
-#### Data Ingestion Output
+### Scalability
+- Scale Spark workers based on workload
+- Use external MinIO cluster for production
+- Implement proper monitoring and alerting
+- Set up automated backups
 
-```
-Starting data ingestion process...
-Ingesting /opt/bitnami/spark/data/raw/card_processor_transactions.csv...
-Loaded 5042 transactions into source_transactions table
-Ingesting /opt/bitnami/spark/data/raw/core_banking_transactions.csv...
-Loaded 5000 transactions into source_transactions table
-Ingesting /opt/bitnami/spark/data/raw/payment_gateway_transactions.csv...
-Loaded 5032 transactions into source_transactions table
-Data ingestion completed successfully.
-```
+### Performance
+- Tune Spark configuration for your workload
+- Optimize Iceberg table partitioning
+- Use appropriate file formats and compression
+- Monitor and optimize query performance
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
 
 ## License
 [MIT License](LICENSE)
+
+## Support
+For issues and questions:
+1. Check the troubleshooting section
+2. Review the logs and error messages
+3. Open an issue with detailed information
+4. Include system information and error logs

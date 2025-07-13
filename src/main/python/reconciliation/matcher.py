@@ -8,6 +8,10 @@ from typing import Dict, List, Tuple, Optional
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, abs, lit, expr, when
+from pyspark.sql.window import Window
+from pyspark.sql.functions import row_number
+from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import concat
 
 
 class TransactionMatcher:
@@ -53,13 +57,15 @@ class TransactionMatcher:
             primary_df.transaction_id.alias("primary_transaction_id"),
             secondary_df.transaction_id.alias("secondary_transaction_id"),
             primary_df.account_id,
-            primary_df.amount,
+            primary_df.amount.alias("primary_amount"),
+            secondary_df.amount.alias("secondary_amount"),
             primary_df.transaction_type,
             primary_df.transaction_date.alias("primary_transaction_date"),
             secondary_df.transaction_date.alias("secondary_transaction_date"),
-            primary_df.status,
+            primary_df.status.alias("primary_status"),
+            secondary_df.status.alias("secondary_status"),
             lit("MATCHED").alias("match_status"),
-            lit(None).alias("discrepancy_type"),
+            lit(None).cast("string").alias("discrepancy_type"),
             lit(None).cast("decimal(18,2)").alias("discrepancy_amount")
         )
         
@@ -101,33 +107,37 @@ class TransactionMatcher:
             Tuple of (matched_df, unmatched_primary_df, unmatched_secondary_df)
         """
         # Join on account_id and transaction_type, with fuzzy matching for amount and date
-        joined_df = primary_df.crossJoin(secondary_df).where(
-            (primary_df.account_id == secondary_df.account_id) &
-            (primary_df.transaction_type == secondary_df.transaction_type) &
-            (abs(primary_df.amount - secondary_df.amount) <= primary_df.amount * amount_tolerance) &
+        # Use aliases to avoid column ambiguity
+        primary_aliased = primary_df.alias("primary")
+        secondary_aliased = secondary_df.alias("secondary")
+        
+        joined_df = primary_aliased.crossJoin(secondary_aliased).where(
+            (col("primary.account_id") == col("secondary.account_id")) &
+            (col("primary.transaction_type") == col("secondary.transaction_type")) &
+            (abs(col("primary.amount") - col("secondary.amount")) <= col("primary.amount") * amount_tolerance) &
             (abs(
-                expr("unix_timestamp(primary_df.transaction_date)") - 
-                expr("unix_timestamp(secondary_df.transaction_date)")
+                expr("unix_timestamp(primary.transaction_date)") - 
+                expr("unix_timestamp(secondary.transaction_date)")
             ) <= date_tolerance_seconds)
         )
         
         # Calculate match score based on closeness of amount and date
         scored_df = joined_df.withColumn(
             "amount_diff", 
-            abs(primary_df.amount - secondary_df.amount)
+            abs(col("primary.amount") - col("secondary.amount"))
         ).withColumn(
             "date_diff_seconds",
             abs(
-                expr("unix_timestamp(primary_df.transaction_date)") - 
-                expr("unix_timestamp(secondary_df.transaction_date)")
+                expr("unix_timestamp(primary.transaction_date)") - 
+                expr("unix_timestamp(secondary.transaction_date)")
             )
         ).withColumn(
             "match_score",
-            expr("1.0 - (amount_diff / primary_df.amount) * 0.5 - (date_diff_seconds / 86400.0) * 0.5")
+            expr("1.0 - (amount_diff / primary.amount) * 0.5 - (date_diff_seconds / 86400.0) * 0.5")
         )
         
         # Find the best match for each primary transaction
-        window_spec = Window.partitionBy("primary_df.transaction_id").orderBy(col("match_score").desc())
+        window_spec = Window.partitionBy("primary.transaction_id").orderBy(col("match_score").desc())
         best_matches = scored_df.withColumn(
             "rank", 
             row_number().over(window_spec)
@@ -135,34 +145,34 @@ class TransactionMatcher:
         
         # Create the matched DataFrame
         matched_df = best_matches.select(
-            primary_df.transaction_id.alias("primary_transaction_id"),
-            secondary_df.transaction_id.alias("secondary_transaction_id"),
-            primary_df.account_id,
-            primary_df.amount.alias("primary_amount"),
-            secondary_df.amount.alias("secondary_amount"),
-            primary_df.transaction_type,
-            primary_df.transaction_date.alias("primary_transaction_date"),
-            secondary_df.transaction_date.alias("secondary_transaction_date"),
-            primary_df.status.alias("primary_status"),
-            secondary_df.status.alias("secondary_status"),
+            col("primary.transaction_id").alias("primary_transaction_id"),
+            col("secondary.transaction_id").alias("secondary_transaction_id"),
+            col("primary.account_id"),
+            col("primary.amount").alias("primary_amount"),
+            col("secondary.amount").alias("secondary_amount"),
+            col("primary.transaction_type"),
+            col("primary.transaction_date").alias("primary_transaction_date"),
+            col("secondary.transaction_date").alias("secondary_transaction_date"),
+            col("primary.status").alias("primary_status"),
+            col("secondary.status").alias("secondary_status"),
             when(
-                (primary_df.amount == secondary_df.amount) &
-                (primary_df.status == secondary_df.status),
+                (col("primary.amount") == col("secondary.amount")) &
+                (col("primary.status") == col("secondary.status")),
                 "MATCHED"
             ).when(
-                (primary_df.status != secondary_df.status),
+                (col("primary.status") != col("secondary.status")),
                 "PARTIAL"
             ).otherwise("PARTIAL").alias("match_status"),
             when(
-                primary_df.amount != secondary_df.amount,
+                col("primary.amount") != col("secondary.amount"),
                 "AMOUNT"
             ).when(
-                primary_df.status != secondary_df.status,
+                col("primary.status") != col("secondary.status"),
                 "STATUS"
             ).otherwise(None).alias("discrepancy_type"),
             when(
-                primary_df.amount != secondary_df.amount,
-                abs(primary_df.amount - secondary_df.amount)
+                col("primary.amount") != col("secondary.amount"),
+                abs(col("primary.amount") - col("secondary.amount"))
             ).otherwise(None).alias("discrepancy_amount")
         )
         

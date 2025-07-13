@@ -8,10 +8,6 @@ from pyspark.sql import SparkSession
 
 def create_spark_session():
     """Create a Spark session with Iceberg configuration."""
-    # Create warehouse directory if it doesn't exist
-    warehouse_dir = "/opt/bitnami/spark/warehouse"
-    os.makedirs(warehouse_dir, exist_ok=True)
-    
     return SparkSession.builder \
         .appName("Iceberg Initialization") \
         .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
@@ -19,7 +15,13 @@ def create_spark_session():
         .config("spark.sql.catalog.spark_catalog.type", "hive") \
         .config("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog") \
         .config("spark.sql.catalog.local.type", "hadoop") \
-        .config("spark.sql.catalog.local.warehouse", f"file://{warehouse_dir}") \
+        .config("spark.sql.catalog.local.warehouse", "s3a://warehouse/iceberg-warehouse/") \
+        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
+        .config("spark.hadoop.fs.s3a.access.key", "minio") \
+        .config("spark.hadoop.fs.s3a.secret.key", "minio123") \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
         .config("spark.sql.defaultCatalog", "local") \
         .getOrCreate()
 

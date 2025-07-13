@@ -74,7 +74,7 @@ services:
       - iceberg-network
 
   minio:
-    image: minio/minio
+    image: docker.arvancloud.ir/minio/minio
     container_name: minio
     ports:
       - "9000:9000"  # MinIO API
@@ -89,7 +89,7 @@ services:
       - iceberg-network
 
   postgres:
-    image: postgres:14
+    image: docker.arvancloud.ir/library/postgres:17-alpine
     container_name: postgres
     ports:
       - "5432:5432"
