@@ -26,6 +26,7 @@ services:
     ports:
       - "8082:8080"  # Spark master UI (using 8082 to avoid conflicts)
       - "7077:7077"  # Spark master port
+      - "4040:4040"  # Spark master port
     environment:
       - SPARK_MODE=master
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
