@@ -84,7 +84,7 @@ services:
       - MINIO_API_PORT_NUMBER=9000
       - MINIO_CONSOLE_PORT_NUMBER=9001
       - MINIO_SCHEME=http
-      - MINIO_DEFAULT_BUCKETS=irisa-ot-warehouse
+      - MINIO_DEFAULT_BUCKETS=warehouse
     healthcheck:
       test: [ "CMD", "mc", "ls", "local", "|", "grep", "irisa-ot-warehouse" ]
       interval: 2s
