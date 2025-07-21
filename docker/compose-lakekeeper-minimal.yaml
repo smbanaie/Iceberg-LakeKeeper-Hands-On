@@ -195,6 +195,10 @@ services:
       start_period: 10s
     networks:
       iceberg_net:
+    volumes:
+      - postgres-lakekeeper:/bitnami/postgresql
+    ports:
+      - "5454:5432"
 
   minio:
     image: docker.arvancloud.ir/bitnami/minio:2025.4.22
@@ -204,7 +208,7 @@ services:
       - MINIO_API_PORT_NUMBER=9000
       - MINIO_CONSOLE_PORT_NUMBER=9001
       - MINIO_SCHEME=http
-      - MINIO_DEFAULT_BUCKETS=examples
+      - MINIO_DEFAULT_BUCKETS=irisa-ot-warehouse
     healthcheck:
       test: [ "CMD", "mc", "ls", "local", "|", "grep", "examples" ]
       interval: 2s
@@ -254,6 +258,7 @@ services:
 
 volumes:
   minio-data:
+  postgres-lakekeeper:
 
 networks:
   iceberg_net:

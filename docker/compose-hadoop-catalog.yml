@@ -84,15 +84,15 @@ services:
       - MINIO_API_PORT_NUMBER=9000
       - MINIO_CONSOLE_PORT_NUMBER=9001
       - MINIO_SCHEME=http
-      - MINIO_DEFAULT_BUCKETS=healthcheck
+      - MINIO_DEFAULT_BUCKETS=irisa-ot-warehouse
     healthcheck:
-      test: [ "CMD", "mc", "ls", "local", "|", "grep", "healthcheck" ]
+      test: [ "CMD", "mc", "ls", "local", "|", "grep", "irisa-ot-warehouse" ]
       interval: 2s
       timeout: 10s
       retries: 2
       start_period: 15s
     volumes:
-      - minio-data:/bitnami/minio/data
+      - minio-data-simple:/bitnami/minio/data
     # command: server /data --console-address ":9001"
     networks:
       - iceberg-network
@@ -101,13 +101,13 @@ services:
     image: docker.arvancloud.ir/bitnami/postgresql:17
     container_name: postgres
     ports:
-      - "5432:5432"
+      - "5455:5432"
     environment:
       - POSTGRESQL_USERNAME=iceberg
       - POSTGRESQL_PASSWORD=iceberg
       - POSTGRESQL_DATABASE=iceberg_catalog
     volumes:
-      - postgres-data:/bitnami/postgresql
+      - postgres-data-simple:/bitnami/postgresql
     networks:
       - iceberg-network
 
@@ -116,5 +116,5 @@ networks:
     driver: bridge
 
 volumes:
-  minio-data:
-  postgres-data:
+  minio-data-simple:
+  postgres-data-simple:
