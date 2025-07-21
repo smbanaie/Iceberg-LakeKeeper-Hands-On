@@ -1,0 +1,37 @@
+name: iceberg-bank-recon
+
+services:
+  unity-server:
+    image: docker.arvancloud.ir/unitycatalog/unitycatalog:v0.3.0
+    hostname: unity-server
+    container_name: unity-server
+    ports:
+      - "8080:8080"
+    volumes:
+    #   - type: bind
+    #     source: ./unitycatalog/etc/conf
+    #     target: /opt/unitycatalog/etc/conf
+      - unitycatalog_data:/home/unitycatalog/etc/data
+    networks:
+      - iceberg-network
+  unity-ui: 
+    build:
+      context: ./unitycatalog/ui
+    environment:
+      - PROXY_HOST=unity-server
+    image: docker.arvancloud.ir/unitycatalog/unitycatalog-ui:main
+    hostname: unity-ui
+    container_name: unity-ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - unity-server
+    networks:
+      - iceberg-network
+
+networks:
+  iceberg-network:
+    driver: bridge
+
+volumes:
+  unitycatalog_data:

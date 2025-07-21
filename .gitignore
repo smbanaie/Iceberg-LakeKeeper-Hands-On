@@ -6,6 +6,7 @@ __pycache__/
 .Python
 .ipynb_checkpoints/
 env/
+.venv/
 build/
 develop-eggs/
 dist/

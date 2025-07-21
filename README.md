@@ -420,3 +420,34 @@ For issues and questions:
 2. Review the logs and error messages
 3. Open an issue with detailed information
 4. Include system information and error logs
+
+## Lakehouse Setup with Jupyter Notebooks
+
+> **Note:** The initial setup scripts for the Lakehouse (Iceberg tables, catalog, and storage configuration) have been moved from `scripts/setup.sh` to dedicated Jupyter notebooks in the `notebooks/` directory. This allows for interactive, step-by-step setup and experimentation.
+
+### Notebooks Overview
+
+There are two main setup flows, each with two phases:
+
+#### 1. Local Storage (Hadoop Catalog)
+- **01_Phase1_complete_setup_local_catalog_local_storage.ipynb**
+  - Sets up the Iceberg catalog using local file-based (Hadoop) storage.
+  - Configures Spark and Iceberg for local warehouse, creates the initial catalog and tables.
+- **01_Phase2_complete_setup_local_catalog_local_storage.ipynb**
+  - Generates and populates sample banking data into the local Iceberg tables.
+  - Demonstrates data ingestion, partitioning, and validation.
+
+#### 2. MinIO S3 Storage (Hadoop Catalog)
+- **02_Phase1_complete_setup_local_catalog_minio_storage.ipynb**
+  - Sets up the Iceberg catalog using MinIO as S3-compatible object storage.
+  - Configures Spark and Iceberg for S3A, creates the initial catalog and tables in MinIO.
+- **02_Phase2_complete_setup_local_catalog_minio_storage.ipynb**
+  - Generates and populates sample banking data into the MinIO-backed Iceberg tables.
+  - Demonstrates S3-based data ingestion, partitioning, and validation.
+
+> **How to use:**
+> 1. Launch Jupyter from Docker (`http://localhost:8889`).
+> 2. Open the desired notebook for your storage backend (local or MinIO).
+> 3. Run the cells step by step to set up the environment, create tables, and load data.
+
+This modular approach makes it easy to experiment with both local and S3-based Lakehouse setups, and to understand the configuration and data flow interactively.

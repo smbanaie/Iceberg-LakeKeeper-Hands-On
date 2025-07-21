@@ -25,8 +25,8 @@ ENV PYSPARK_PYTHON=python3
 ENV PYSPARK_DRIVER_PYTHON=python3
 
 # Install Python dependencies
-COPY requirements.txt /tmp/
-RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
+COPY requirements-archive.txt /tmp/
+RUN pip3 install --no-cache-dir -r /tmp/requirements-archive.txt
 
 # Download Iceberg Spark runtime
 RUN wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.9.1/iceberg-spark-runtime-3.5_2.12-1.9.1.jar -P $SPARK_HOME/jars/
@@ -49,7 +49,7 @@ COPY conf/spark-defaults.conf $SPARK_HOME/conf/
 WORKDIR $SPARK_HOME
 
 # Expose ports for Spark UI and Jupyter
-EXPOSE 4040 8080 8081 8888
+EXPOSE 4040 4041 4042 8082 8080 8081 8888
 
 # Default command
 CMD ["bin/spark-class", "org.apache.spark.deploy.master.Master"]
