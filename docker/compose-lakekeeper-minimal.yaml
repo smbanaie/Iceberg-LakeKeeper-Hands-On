@@ -210,7 +210,7 @@ services:
       - MINIO_SCHEME=http
       - MINIO_DEFAULT_BUCKETS=irisa-ot-warehouse
     healthcheck:
-      test: [ "CMD", "mc", "ls", "local", "|", "grep", "examples" ]
+      test: [ "CMD", "mc", "ls", "local", "|", "grep", "irisa-ot-warehouse" ]
       interval: 2s
       timeout: 10s
       retries: 2
