@@ -3,7 +3,7 @@
   "project-id": "00000000-0000-0000-0000-000000000000",
   "storage-profile": {
     "type": "s3",
-    "bucket": "irisa-ot-warehouse",
+    "bucket": "irisa-warehouse",
     "key-prefix": "ot",
     "assume-role-arn": null,
     "endpoint": "http://minio:9000",
