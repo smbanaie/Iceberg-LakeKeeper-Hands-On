@@ -7,10 +7,8 @@ services:
     ports:
       - "8889:8888"  # Jupyter notebook (using 8889 to avoid conflicts)
     volumes:
-      - ../data:/opt/jupyter/data
-      - ../src:/opt/jupyter/src
       - ../notebooks:/opt/jupyter/notebooks
-      - ../scripts:/opt/jupyter/scripts
+      - ../data:/opt/jupyter/data
     networks:
       - iceberg_net
   
@@ -182,9 +180,24 @@ services:
     networks:
       - iceberg_net
 
+  test-debezium-consumer:
+    build:
+      context: .
+      dockerfile: DockerfilePython
+    container_name: test-debezium-consumer
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      lakekeeper:
+        condition: service_healthy
+    networks:
+      - iceberg_net
+    command: ["python", "test_debezium_consumer.py"]
+
 volumes:
   minio-data:
   postgres-lakekeeper:
 
 networks:
   iceberg_net:
+

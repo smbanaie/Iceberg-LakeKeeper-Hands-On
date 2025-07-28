@@ -1,0 +1,20 @@
+# Debezium Kafka Consumer Dependencies
+# ===================================
+
+# Kafka client
+kafka-python==2.2.15
+
+# Iceberg and data processing
+pyiceberg==0.9.1
+pyarrow==21.0.0
+pandas==2.3.1
+
+# Data processing and utilities
+pytz==2025.2
+
+# Optional: For better performance with large datasets
+numpy==2.3.2
+
+# Optional: For JSON schema validation (if needed)
+jsonschema==4.25.0 
+duckdb==1.3.2
