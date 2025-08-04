@@ -1,0 +1,310 @@
+services:
+  jupyter:
+    build:
+      context: ./jupyter
+      dockerfile: Dockerfile
+    container_name: jupyter
+    ports:
+      - "8889:8888"  # Jupyter notebook (using 8889 to avoid conflicts)
+    volumes:
+      - ./notebooks-access-control:/opt/jupyter/notebooks
+      - ../data:/opt/jupyter/data
+    networks:
+      - iceberg_net
+  
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+    volumes:
+      - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json
+    healthcheck:
+      test: [ "CMD-SHELL", 'exec 3<>/dev/tcp/127.0.0.1/8080;echo -e "GET /realms/master/.well-known/openid-configuration HTTP/1.1\r\nhost: 127.0.0.1:8080\r\nConnection: close\r\n\r\n" >&3;grep "jwks_uri"  <&3' ]
+      interval: 2s
+      timeout: 10s
+      retries: 2
+      start_period: 60s
+    ports:
+      - "30080:8080"
+    command: [ "start-dev", "--metrics-enabled=true", "--health-enabled=true", "--import-realm", "--verbose", "--log-level=INFO", "--features=token-exchange" ]
+    networks:
+      iceberg_net:
+
+  lakekeeper:
+    image: ${LAKEKEEPER_TEST__SERVER_IMAGE:-quay.io/lakekeeper/catalog:latest-main}
+    # pull_policy: always
+    environment:
+      - LAKEKEEPER__PG_ENCRYPTION_KEY=This-is-NOT-Secure!
+      - LAKEKEEPER__PG_DATABASE_URL_READ=postgresql://postgres:postgres@db:5432/postgres
+      - LAKEKEEPER__PG_DATABASE_URL_WRITE=postgresql://postgres:postgres@db:5432/postgres
+      - LAKEKEEPER__AUTHZ_BACKEND=openfga
+      - LAKEKEEPER__OPENFGA__ENDPOINT=http://openfga:8081
+      - LAKEKEEPER__OPENID_PROVIDER_URI=http://keycloak:8080/realms/iceberg
+      - LAKEKEEPER__OPENID_ADDITIONAL_ISSUERS=http://localhost:30080/realms/iceberg
+      - LAKEKEEPER__OPENID_AUDIENCE=lakekeeper
+      - LAKEKEEPER__UI__OPENID_CLIENT_ID=lakekeeper
+      - LAKEKEEPER__UI__OPENID_PROVIDER_URI=http://localhost:30080/realms/iceberg
+      - LAKEKEEPER__OPENFGA__CLIENT_ID=openfga
+      - LAKEKEEPER__OPENFGA__CLIENT_SECRET=xqE1vUrifVDKAZdLuz6JAnDxMYLdGu5z
+      - LAKEKEEPER__OPENFGA__TOKEN_ENDPOINT=http://keycloak:8080/realms/iceberg/protocol/openid-connect/token
+      - RUST_LOG=info,lakekeeper=trace,middle=trace
+    command: [ "serve" ]
+    healthcheck:
+      test: [ "CMD", "/home/nonroot/lakekeeper", "healthcheck" ]
+      interval: 1s
+      timeout: 10s
+      retries: 3
+      start_period: 3s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      iceberg_net:
+    ports:
+      - "8181:8181"
+
+  migrate:
+    image: ${LAKEKEEPER_TEST__SERVER_IMAGE:-quay.io/lakekeeper/catalog:latest-main}
+    # pull_policy: always
+    environment:
+      - LAKEKEEPER__PG_ENCRYPTION_KEY=This-is-NOT-Secure!
+      - LAKEKEEPER__PG_DATABASE_URL_READ=postgresql://postgres:postgres@db:5432/postgres
+      - LAKEKEEPER__PG_DATABASE_URL_WRITE=postgresql://postgres:postgres@db:5432/postgres
+      - LAKEKEEPER__AUTHZ_BACKEND=openfga
+      - LAKEKEEPER__OPENFGA__ENDPOINT=http://openfga:8081
+      - LAKEKEEPER__OPENFGA__CLIENT_ID=openfga
+      - LAKEKEEPER__OPENFGA__CLIENT_SECRET=xqE1vUrifVDKAZdLuz6JAnDxMYLdGu5z
+      - LAKEKEEPER__OPENFGA__TOKEN_ENDPOINT=http://keycloak:8080/realms/iceberg/protocol/openid-connect/token
+      - RUST_LOG=info,lakekeeper=info,middle=trace
+    restart: "no"
+    command: [ "migrate" ]
+    depends_on:
+      db:
+        condition: service_healthy
+      openfga:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      iceberg_net:
+
+  bootstrap:
+    image: docker.arvancloud.ir/curlimages/curl
+    depends_on:
+      lakekeeper:
+        condition: service_healthy
+    restart: "no"
+    command:
+      - -w
+      - "%{http_code}"
+      - "-X"
+      - "POST"
+      - "-v"
+      - "http://lakekeeper:8181/management/v1/bootstrap"
+      - "-H"
+      - "Content-Type: application/json"
+      - "--data"
+      - '{"accept-terms-of-use": true}'
+      - "-o"
+      - "/dev/null"
+      # - "--fail-with-body"
+    networks:
+      iceberg_net:
+
+  initialwarehouse:
+    image: docker.arvancloud.ir/curlimages/curl
+    depends_on:
+      lakekeeper:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+    restart: "no"
+    command:
+      - -w
+      - "%{http_code}"
+      - "-X"
+      - "POST"
+      - "-v"
+      - "http://lakekeeper:8181/management/v1/warehouse"
+      - "-H"
+      - "Content-Type: application/json"
+      - "--data"
+      - "@create-default-warehouse.json"
+      - "-o"
+      - "/dev/null"
+      # - "--fail-with-body"
+    volumes:
+      - ./create-default-warehouse.json:/home/curl_user/create-default-warehouse.json
+    networks:
+      iceberg_net:
+
+  db:
+    image: docker.arvancloud.ir/bitnami/postgresql:17
+    environment:
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=postgres
+      - POSTGRESQL_DATABASE=postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -p 5432 -d postgres" ]
+      interval: 2s
+      timeout: 10s
+      retries: 2
+      start_period: 10s
+    networks:
+      iceberg_net:
+    volumes:
+      - postgres-lakekeeper:/bitnami/postgresql
+    ports:
+      - "5454:5432"
+  
+  openfga-db:
+    image: bitnami/postgresql:17
+    environment:
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=postgres
+      - POSTGRESQL_DATABASE=postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -p 5432 -d postgres" ]
+      interval: 2s
+      timeout: 10s
+      retries: 2
+      start_period: 10s
+    networks:
+      iceberg_net:
+
+  openfga-migrate:
+    image: docker.arvancloud.ir/openfga/openfga:v1.9
+    command: migrate
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://postgres:postgres@openfga-db:5432/postgres?sslmode=disable
+    networks:
+      iceberg_net:
+    depends_on:
+      openfga-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  openfga-deploy-irisa:
+    image: docker.arvancloud.ir/library/alpine:latest
+    volumes:
+      - ./openfga:/openfga
+    working_dir: /openfga
+    command: ["sh", "-c", "apk add --no-cache curl jq && sleep 10 && sh deploy-irisa-limited-access.sh"]
+    networks:
+      iceberg_net:
+    depends_on:
+      openfga:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    restart: "no"
+
+  openfga:
+    depends_on:
+      openfga-db:
+        condition: service_healthy
+      openfga-migrate:
+        condition: service_completed_successfully
+    image: docker.arvancloud.ir/openfga/openfga:v1.9
+    command: run
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://postgres:postgres@openfga-db:5432/postgres?sslmode=disable
+      - OPENFGA_DATASTORE_MAX_OPEN_CONNS=50
+      - OPENFGA_PLAYGROUND_ENABLED=false
+      - OPENFGA_AUTHN_METHOD=oidc
+      - OPENFGA_AUTHN_OIDC_ISSUER=http://keycloak:8080/realms/iceberg
+      - OPENFGA_AUTHN_OIDC_ISSUER_ALIASES=http://localhost:30080/realms/iceberg
+      - OPENFGA_AUTHN_OIDC_AUDIENCE=openfga
+      - OPENFGA_HTTP_TLS_ENABLED=false
+    ports:
+      - "8080:8080"
+    networks:
+      iceberg_net:
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/usr/local/bin/grpc_health_probe",
+          "-addr=openfga:8081"
+        ]
+      interval: 5s
+      timeout: 30s
+      retries: 3
+
+  minio:
+    image: docker.arvancloud.ir/bitnami/minio:2025.4.22
+    environment:
+      - MINIO_ROOT_USER=minio-root-user
+      - MINIO_ROOT_PASSWORD=minio-root-password
+      - MINIO_API_PORT_NUMBER=9000
+      - MINIO_CONSOLE_PORT_NUMBER=9001
+      - MINIO_SCHEME=http
+      - MINIO_DEFAULT_BUCKETS=irisa-warehouse
+    healthcheck:
+      test: [ "CMD", "mc", "ls", "local", "|", "grep", "irisa-warehouse" ]
+      interval: 2s
+      timeout: 10s
+      retries: 2
+      start_period: 15s
+    networks:
+      iceberg_net:
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/bitnami/minio/data
+  
+  trino:
+    image: docker.arvancloud.ir/trinodb/trino:476
+    environment:
+      - CATALOG_MANAGEMENT=dynamic
+    profiles:
+      - trino
+    healthcheck:
+      test: [ "CMD", "curl", "-I", "http://localhost:8080/v1/status" ]
+      interval: 2s
+      timeout: 10s
+      retries: 2
+      start_period: 10s
+    ports:
+      - "9999:8080"
+    networks:
+      - iceberg_net
+
+  starrocks:
+    image: docker.arvancloud.ir/starrocks/allin1-ubuntu:3.5-latest
+    profiles:
+      - starrocks
+    healthcheck:
+      test: [ "CMD", "curl", "-I", "http://starrocks:8030/api/health" ]
+      interval: 2s
+      timeout: 10s
+      retries: 2
+      start_period: 30s
+    ports:
+      - "9030:9030"
+      - "8030:8030"
+    volumes:
+      - starrocks-fe-meta:/data/deploy/starrocks/fe/meta
+      - starrocks-be-storage:/data/deploy/starrocks/be/storage
+    networks:
+      - iceberg_net
+
+volumes:
+  minio-data:
+  postgres-lakekeeper:
+  starrocks-fe-meta:
+  starrocks-be-storage:
+
+networks:
+  iceberg_net:
+    driver: bridge
+

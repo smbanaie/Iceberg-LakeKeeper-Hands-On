@@ -1,0 +1,62 @@
+model
+  schema 1.1
+
+type user
+  relations
+    define can_read_limited_columns: [user:irisa]
+
+type table
+  relations
+    define can_read: [user]
+    define can_read_limited_columns: [user]
+    define can_write: [user]
+
+type column
+  relations
+    define can_read: [user]
+    define can_write: [user]
+
+type warehouse
+  relations
+    define can_access: [user]
+
+# Define the specific table and columns
+type fake_seclink_table
+  relations
+    define can_read_all: [user:service-account-trino, user:service-account-starrocks, user:service-account-duckdb]
+    define can_read_limited: [user:irisa]
+    define can_write: [user:service-account-trino, user:service-account-starrocks, user:service-account-duckdb]
+
+type fake_seclink_column
+  relations
+    define can_read: [user]
+    define can_write: [user]
+
+# Specific column types for limited access
+type id_column
+  relations
+    define can_read: [user:irisa, user:service-account-trino, user:service-account-starrocks, user:service-account-duckdb]
+
+type amount_column
+  relations
+    define can_read: [user:irisa, user:service-account-trino, user:service-account-starrocks, user:service-account-duckdb]
+
+type source_column
+  relations
+    define can_read: [user:service-account-trino, user:service-account-starrocks, user:service-account-duckdb]
+
+type destination_column
+  relations
+    define can_read: [user:service-account-trino, user:service-account-starrocks, user:service-account-duckdb]
+
+type datein_column
+  relations
+    define can_read: [user:service-account-trino, user:service-account-starrocks, user:service-account-duckdb]
+
+type dateout_column
+  relations
+    define can_read: [user:service-account-trino, user:service-account-starrocks, user:service-account-duckdb]
+
+type message_column
+  relations
+    define can_read: [user:service-account-trino, user:service-account-starrocks, user:service-account-duckdb] 
