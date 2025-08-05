@@ -1,0 +1,59 @@
+{
+  "tuple_keys": [
+    {
+      "user": "user:jane",
+      "relation": "can_read_limited",
+      "object": "fake_seclink_table:irisa.fake_seclink"
+    },
+    {
+      "user": "user:jane",
+      "relation": "can_read",
+      "object": "id_column:irisa.fake_seclink.id"
+    },
+    {
+      "user": "user:jane",
+      "relation": "can_read",
+      "object": "amount_column:irisa.fake_seclink.amount"
+    },
+    {
+      "user": "user:service-account-trino",
+      "relation": "can_read_all",
+      "object": "fake_seclink_table:irisa.fake_seclink"
+    },
+    {
+      "user": "user:service-account-trino",
+      "relation": "can_read",
+      "object": "id_column:irisa.fake_seclink.id"
+    },
+    {
+      "user": "user:service-account-trino",
+      "relation": "can_read",
+      "object": "amount_column:irisa.fake_seclink.amount"
+    },
+    {
+      "user": "user:service-account-trino",
+      "relation": "can_read",
+      "object": "source_column:irisa.fake_seclink.source"
+    },
+    {
+      "user": "user:service-account-trino",
+      "relation": "can_read",
+      "object": "destination_column:irisa.fake_seclink.destination"
+    },
+    {
+      "user": "user:service-account-trino",
+      "relation": "can_read",
+      "object": "datein_column:irisa.fake_seclink.datein"
+    },
+    {
+      "user": "user:service-account-trino",
+      "relation": "can_read",
+      "object": "dateout_column:irisa.fake_seclink.dateout"
+    },
+    {
+      "user": "user:service-account-trino",
+      "relation": "can_read",
+      "object": "message_column:irisa.fake_seclink.message"
+    }
+  ]
+}

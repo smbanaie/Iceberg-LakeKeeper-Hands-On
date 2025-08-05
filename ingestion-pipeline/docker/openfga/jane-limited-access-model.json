@@ -1,0 +1,205 @@
+{
+  "schema_version": "1.1",
+  "type_definitions": [
+    {
+      "type": "user",
+      "relations": {
+        "can_read_limited_columns": {
+          "union": {
+            "child": [
+              { "this": {} }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "relations": {
+          "can_read_limited_columns": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "jane" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "table",
+      "relations": {
+        "can_read": { "this": {} },
+        "can_read_limited_columns": { "this": {} },
+        "can_write": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read": { "directly_related_user_types": [{ "type": "user" }] },
+          "can_read_limited_columns": { "directly_related_user_types": [{ "type": "user" }] },
+          "can_write": { "directly_related_user_types": [{ "type": "user" }] }
+        }
+      }
+    },
+    {
+      "type": "column",
+      "relations": {
+        "can_read": { "this": {} },
+        "can_write": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read": { "directly_related_user_types": [{ "type": "user" }] },
+          "can_write": { "directly_related_user_types": [{ "type": "user" }] }
+        }
+      }
+    },
+    {
+      "type": "fake_seclink_table",
+      "relations": {
+        "can_read_all": { "this": {} },
+        "can_read_limited": { "this": {} },
+        "can_write": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read_all": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "service-account-trino" },
+              { "type": "user", "id": "service-account-starrocks" },
+              { "type": "user", "id": "service-account-duckdb" }
+            ]
+          },
+          "can_read_limited": {
+            "directly_related_user_types": [{ "type": "user", "id": "jane" }]
+          },
+          "can_write": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "service-account-trino" },
+              { "type": "user", "id": "service-account-starrocks" },
+              { "type": "user", "id": "service-account-duckdb" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "id_column",
+      "relations": {
+        "can_read": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "service-account-jane" },
+              { "type": "user", "id": "service-account-trino" },
+              { "type": "user", "id": "service-account-starrocks" },
+              { "type": "user", "id": "service-account-duckdb" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "amount_column",
+      "relations": {
+        "can_read": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "jane" },
+              { "type": "user", "id": "service-account-trino" },
+              { "type": "user", "id": "service-account-starrocks" },
+              { "type": "user", "id": "service-account-duckdb" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "source_column",
+      "relations": {
+        "can_read": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "service-account-trino" },
+              { "type": "user", "id": "service-account-starrocks" },
+              { "type": "user", "id": "service-account-duckdb" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "destination_column",
+      "relations": {
+        "can_read": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "service-account-jane" },
+              { "type": "user", "id": "service-account-trino" },
+              { "type": "user", "id": "service-account-starrocks" },
+              { "type": "user", "id": "service-account-duckdb" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "datein_column",
+      "relations": {
+        "can_read": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "service-account-trino" },
+              { "type": "user", "id": "service-account-starrocks" },
+              { "type": "user", "id": "service-account-duckdb" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "dateout_column",
+      "relations": {
+        "can_read": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "service-account-trino" },
+              { "type": "user", "id": "service-account-starrocks" },
+              { "type": "user", "id": "service-account-duckdb" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "message_column",
+      "relations": {
+        "can_read": { "this": {} }
+      },
+      "metadata": {
+        "relations": {
+          "can_read": {
+            "directly_related_user_types": [
+              { "type": "user", "id": "service-account-trino" },
+              { "type": "user", "id": "service-account-starrocks" },
+              { "type": "user", "id": "service-account-duckdb" }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -408,29 +408,6 @@
     "notBefore" : 0,
     "groups" : [ ]
   }, {
-    "id" : "irisa-user-id-1234-5678-9abc-def0",
-    "username" : "irisa",
-    "firstName" : "Irisa",
-    "lastName" : "Limited",
-    "email" : "irisa@example.com",
-    "emailVerified" : true,
-    "createdTimestamp" : 1735995480968,
-    "enabled" : true,
-    "totp" : false,
-    "credentials" : [ {
-      "id" : "irisa-credential-id-1234-5678-9abc-def0",
-      "type" : "password",
-      "userLabel" : "Irisa password",
-      "createdDate" : 1735995502485,
-      "secretData" : "{\"value\":\"CgUpPB1zcH+mqPbx6kGuDN31UcISJD1LtnELz7fAVKU=\",\"salt\":\"Ev9ZTEaC7PQsW80NTGEN3g==\",\"additionalParameters\":{}}",
-      "credentialData" : "{\"hashIterations\":5,\"algorithm\":\"argon2\",\"additionalParameters\":{\"hashLength\":[\"32\"],\"memory\":[\"7168\"],\"type\":[\"id\"],\"version\":[\"1.3\"],\"parallelism\":[\"1\"]}}"
-    } ],
-    "disableableCredentialTypes" : [ ],
-    "requiredActions" : [ ],
-    "realmRoles" : [ "default-roles-iceberg" ],
-    "notBefore" : 0,
-    "groups" : [ ]
-  }, {
     "id" : "cfb55bf6-fcbb-4a1e-bfec-30c6649b52f8",
     "username" : "peter",
     "firstName" : "Peter",
@@ -1130,101 +1107,6 @@
     "defaultClientScopes" : [ "web-origins", "acr", "roles", "profile", "basic", "email" ],
     "optionalClientScopes" : [ "lakekeeper", "address", "phone", "offline_access", "microprofile-jwt" ]
   }, {
-    "id" : "irisa-client-id-1234-5678-9abc-def0",
-    "clientId" : "irisa-client",
-    "name" : "Irisa Limited Access Client",
-    "description" : "Client for Irisa user with limited column access",
-    "rootUrl" : "",
-    "adminUrl" : "",
-    "baseUrl" : "",
-    "surrogateAuthRequired" : false,
-    "enabled" : true,
-    "alwaysDisplayInConsole" : false,
-    "clientAuthenticatorType" : "client-secret",
-    "secret" : "IrisaSecretKey123456789",
-    "redirectUris" : [ "*" ],
-    "webOrigins" : [ ],
-    "notBefore" : 0,
-    "bearerOnly" : false,
-    "consentRequired" : false,
-    "standardFlowEnabled" : true,
-    "implicitFlowEnabled" : false,
-    "directAccessGrantsEnabled" : true,
-    "serviceAccountsEnabled" : true,
-    "publicClient" : false,
-    "frontchannelLogout" : true,
-    "protocol" : "openid-connect",
-    "attributes" : {
-      "access.token.lifespan" : "3600",
-      "client.secret.creation.time" : "1735289518",
-      "client.introspection.response.allow.jwt.claim.enabled" : "false",
-      "post.logout.redirect.uris" : "+",
-      "oauth2.device.authorization.grant.enabled" : "false",
-      "backchannel.logout.revoke.offline.tokens" : "false",
-      "use.refresh.tokens" : "true",
-      "realm_client" : "false",
-      "oidc.ciba.grant.enabled" : "false",
-      "client.use.lightweight.access.token.enabled" : "false",
-      "backchannel.logout.session.required" : "true",
-      "client_credentials.use_refresh_token" : "false",
-      "tls.client.certificate.bound.access.tokens" : "false",
-      "require.pushed.authorization.requests" : "false",
-      "acr.loa.map" : "{}",
-      "display.on.consent.screen" : "false",
-      "token.response.type.bearer.lower-case" : "false"
-    },
-    "authenticationFlowBindingOverrides" : { },
-    "fullScopeAllowed" : true,
-    "nodeReRegistrationTimeout" : -1,
-    "protocolMappers" : [ {
-      "id" : "irisa-client-id-mapper-1234-5678-9abc-def0",
-      "name" : "Client ID",
-      "protocol" : "openid-connect",
-      "protocolMapper" : "oidc-usersessionmodel-note-mapper",
-      "consentRequired" : false,
-      "config" : {
-        "user.session.note" : "client_id",
-        "introspection.token.claim" : "true",
-        "userinfo.token.claim" : "true",
-        "id.token.claim" : "true",
-        "access.token.claim" : "true",
-        "claim.name" : "client_id",
-        "jsonType.label" : "String"
-      }
-    }, {
-      "id" : "irisa-client-host-mapper-1234-5678-9abc-def0",
-      "name" : "Client Host",
-      "protocol" : "openid-connect",
-      "protocolMapper" : "oidc-usersessionmodel-note-mapper",
-      "consentRequired" : false,
-      "config" : {
-        "user.session.note" : "clientHost",
-        "introspection.token.claim" : "true",
-        "userinfo.token.claim" : "true",
-        "id.token.claim" : "true",
-        "access.token.claim" : "true",
-        "claim.name" : "clientHost",
-        "jsonType.label" : "String"
-      }
-    }, {
-      "id" : "irisa-client-ip-mapper-1234-5678-9abc-def0",
-      "name" : "Client IP Address",
-      "protocol" : "openid-connect",
-      "protocolMapper" : "oidc-usersessionmodel-note-mapper",
-      "consentRequired" : false,
-      "config" : {
-        "user.session.note" : "clientAddress",
-        "introspection.token.claim" : "true",
-        "userinfo.token.claim" : "true",
-        "id.token.claim" : "true",
-        "access.token.claim" : "true",
-        "claim.name" : "clientAddress",
-        "jsonType.label" : "String"
-      }
-    } ],
-    "defaultClientScopes" : [ "web-origins", "acr", "roles", "profile", "basic", "email" ],
-    "optionalClientScopes" : [ "lakekeeper", "address", "irisa-limited", "phone", "offline_access", "sign", "microprofile-jwt" ]
-  }, {
     "id" : "6d3986c2-d425-4ddb-b11f-26cebfdfde67",
     "clientId" : "trino",
     "name" : "Trino",
@@ -1761,32 +1643,6 @@
         "single" : "false",
         "attribute.nameformat" : "Basic",
         "attribute.name" : "Role"
-      }
-    } ]
-  }, {
-    "id" : "irisa-limited-scope-id-1234-5678-9abc-def0",
-    "name" : "irisa-limited",
-    "description" : "Limited access scope for Irisa user - only 2 columns",
-    "protocol" : "openid-connect",
-    "attributes" : {
-      "include.in.token.scope" : "false",
-      "display.on.consent.screen" : "true",
-      "gui.order" : "",
-      "consent.screen.text" : "Limited access to specific columns only"
-    },
-    "protocolMappers" : [ {
-      "id" : "irisa-limited-audience-mapper-1234-5678-9abc-def0",
-      "name" : "Add irisa-limited Audience",
-      "protocol" : "openid-connect",
-      "protocolMapper" : "oidc-audience-mapper",
-      "consentRequired" : false,
-      "config" : {
-        "included.client.audience" : "irisa-client",
-        "id.token.claim" : "false",
-        "lightweight.claim" : "false",
-        "introspection.token.claim" : "true",
-        "access.token.claim" : "true",
-        "userinfo.token.claim" : "false"
       }
     } ]
   }, {
